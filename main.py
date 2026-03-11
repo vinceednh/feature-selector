@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 import time
 
 def load_data(filename):
@@ -35,8 +36,9 @@ def euclidean_distance(object_to_classify, neighbor, feature_set):
         total += (object_to_classify[f] - neighbor[f]) ** 2
     return math.sqrt(total)
 
-def nearest_neighbor(features, labels, feature_set):
+def nearest_neighbor(features, labels, feature_set, best_so_far_accuracy = 0):    
     number_correctly_classified = 0
+    n_instances = len(features)
 
     for i in range(len(features)):
         object_to_classify = features[i]
@@ -58,8 +60,84 @@ def nearest_neighbor(features, labels, feature_set):
         if label_object_to_classify == nearest_neighbor_label:
             number_correctly_classified += 1
 
+        # Early abandoning method from P2_hints
+        instances_remaining = n_instances - i - 1
+        max_possible_accuracy = (number_correctly_classified + instances_remaining) / n_instances
+        if max_possible_accuracy < best_so_far_accuracy:
+            return -1
+
     # Returns the accuracy as a percentage between 0 and 1
-    return number_correctly_classified / len(features)
+    return number_correctly_classified / n_instances
+
+def forward_selection(features, labels, n_features):
+    # Starts with empty sets of features and adds the best feature at each level
+    current_set_of_features = []
+    best_overall_accuracy = 0
+    best_overall_features = []
+    graph_labels = ["{}"]
+    graph_accuracies = [0]
+
+    for i in range(n_features):
+        feature_to_add_at_this_level = None
+        level_best_accuracy = 0
+
+        # Adding each feature that is not already in the current set of features and testing the accuracy of the new set of features
+        for k in range(n_features):
+            if k not in current_set_of_features:
+                considered_set = current_set_of_features + [k]
+                accuracy = nearest_neighbor(features, labels, considered_set, level_best_accuracy)
+
+                if accuracy == -1:
+                    continue
+
+                # For display purposes, we add 1 to each feature number since the features are at index 0 but features start at 1
+                display_considered = []
+                for f in considered_set:
+                    display_considered.append(f + 1)
+
+                print(f"Using feature(s) {display_considered} accuracy is {round(accuracy * 100, 1)}%")
+
+                if accuracy > level_best_accuracy:
+                    level_best_accuracy = accuracy
+                    feature_to_add_at_this_level = k
+            
+        # Adds the best feature found at this level to the current set of features
+        current_set_of_features.append(feature_to_add_at_this_level)
+
+        display_current = []
+        for f in current_set_of_features:
+            display_current.append(f + 1)
+
+        graph_labels.append(str(display_current))
+        graph_accuracies.append(round(level_best_accuracy * 100, 1))
+
+        # Tracks the best overall in case the accuracy drops later
+        if level_best_accuracy > best_overall_accuracy:
+            best_overall_accuracy = level_best_accuracy
+            best_overall_features = list(current_set_of_features)
+        else:
+            print(f"\n(Warning: Accuracy has decreased! Continuing search in case of local maxima)")
+        
+        print(f"Feature set {display_current} was best, accuracy is {round(level_best_accuracy * 100, 1)}%\n")
+
+    display_best = []
+    for f in best_overall_features:
+        display_best.append(f + 1)
+    
+    print(f"Finished search!! The best feature subset is {display_best}, which has an accuracy of {round(best_overall_accuracy * 100, 1)}%")
+    
+    return best_overall_features, best_overall_accuracy, graph_labels, graph_accuracies
+
+def plot_graph(graph_labels, graph_accuracies, title):
+    plt.figure(figsize = (30, 6))
+    plt.bar(graph_labels, graph_accuracies, color = 'gray')
+    plt.ylabel('Accuracy (%)')
+    plt.ylim(0, 100)
+    plt.title(title)
+    plt.xticks(rotation = 45, ha = 'right')
+    plt.tight_layout()
+    plt.show()
+
 
 def main():
     print ("Welcome to the Feature Selector!")
@@ -70,20 +148,30 @@ def main():
     print("2) Backward Elimination\n")
     choice = input("Enter your choice: ").strip()
 
-    if choice == "1":
-        print("You selected Forward Selection.")
-    elif choice == "2":
-        print("You selected Backward Elimination.")
-    else:
-        print("Invalid choice. Please type 1 or 2.")
-        return
-
     features, labels = load_data(filename)
 
     n_instances = len(features)
     n_features = len(features[0])
 
     print(f"\nThis dataset has {n_features} features (not including the class attribute), with {n_instances} instances.")
+
+    # Recording the time to add into the report
+    if choice == "1":
+        start_time = time.time()
+        best_features, best_accuracy, graph_labels, graph_accuracies = forward_selection(features, labels, n_features)
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f"Forward Selection took {round(total_time, 2)} seconds to run.")
+        plot_graph(graph_labels, graph_accuracies, "Forward Selection")
+    elif choice == "2":
+        start_time = time.time()
+        print("You selected Backward Elimination.")
+        end_time = time.time()
+        total_time = end_time - start_time
+        print(f"Backward Elimination took {round(total_time, 2)} seconds to run.")
+    else:
+        print("Invalid choice. Please type 1 or 2.")
+        return
 
 if __name__ == "__main__":
     main()
