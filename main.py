@@ -31,10 +31,8 @@ def load_data(filename):
 
 # Calculates the distance between the object and the neighbor using the features in the feature set
 def euclidean_distance(object_to_classify, neighbor, feature_set):
-    total = 0
-    for f in feature_set:
-        total += (object_to_classify[f] - neighbor[f]) ** 2
-    return math.sqrt(total)
+    diff = object_to_classify[feature_set] - neighbor[feature_set]
+    return np.sqrt(np.sum(diff * diff))
 
 def nearest_neighbor(features, labels, feature_set, best_so_far_accuracy = 0):    
     number_correctly_classified = 0
@@ -45,17 +43,19 @@ def nearest_neighbor(features, labels, feature_set, best_so_far_accuracy = 0):
         label_object_to_classify = labels[i]
 
         nearest_neighbor_distance = float('inf')
-        nearest_neighbor_location = float('inf')
+        nearest_neighbor_location = None
 
         # "Leave one out" method: Leaving out the object to classify and finding the nearest neighbor from the rest of the objects
         for k in range(len(features)):
             if k != i:
-                distance = euclidean_distance(object_to_classify, features[k], feature_set)
+                neighbor = features[k]
+                label_neighbor = labels[k]
+                distance = euclidean_distance(object_to_classify, neighbor, feature_set)
 
                 if distance < nearest_neighbor_distance:
                     nearest_neighbor_distance = distance
                     nearest_neighbor_location = k
-                    nearest_neighbor_label = labels[nearest_neighbor_location]
+                    nearest_neighbor_label = label_neighbor
         
         if label_object_to_classify == nearest_neighbor_label:
             number_correctly_classified += 1
@@ -128,6 +128,66 @@ def forward_selection(features, labels, n_features):
     
     return best_overall_features, best_overall_accuracy, graph_labels, graph_accuracies
 
+def backward_elimination(features, labels, n_features):
+    current_set_of_features = list(range(n_features))
+    best_overall_accuracy = 0
+    best_overall_features = []
+    graph_labels = []
+    graph_accuracies = []
+
+    for i in range(n_features - 1):
+        feature_to_remove_at_this_level = None
+        level_best_accuracy = 0
+
+        for k in range(n_features):
+            if k in current_set_of_features:
+                considered_set = []
+                for f in current_set_of_features:
+                    if f != k:
+                        considered_set.append(f)
+                
+                accuracy = nearest_neighbor(features, labels, considered_set, level_best_accuracy)
+
+                if accuracy == -1:
+                    continue
+
+                display_considered = []
+                for f in considered_set:
+                    display_considered.append(f + 1)
+
+                print(f"Using feature(s) {display_considered} accuracy is {round(accuracy * 100, 1)}%")
+
+                if accuracy > level_best_accuracy:
+                    level_best_accuracy = accuracy
+                    feature_to_remove_at_this_level = k
+        
+        current_set_of_features.remove(feature_to_remove_at_this_level)
+
+        display_current = []
+        for f in current_set_of_features:
+            display_current.append(f + 1)
+        
+        graph_labels.append(str(display_current))
+        graph_accuracies.append(round(level_best_accuracy * 100, 1))
+
+        if level_best_accuracy > best_overall_accuracy:
+            best_overall_accuracy = level_best_accuracy
+            best_overall_features = list(current_set_of_features)
+        else:
+            print(f"\n(Warning: Accuracy has decreased! Continuing search in case of local maxima)")
+
+        print(f"Feature set {display_current} was best, accuracy is {round(level_best_accuracy * 100, 1)}%\n")
+
+    display_best = []
+    for f in best_overall_features:
+        display_best.append(f + 1)
+    
+    print(f"Finished search!! The best feature subset is {display_best}, which has an accuracy of {round(best_overall_accuracy * 100, 1)}%")
+
+    return best_overall_features, best_overall_accuracy, graph_labels, graph_accuracies
+
+    
+
 def plot_graph(graph_labels, graph_accuracies, title):
     plt.figure(figsize = (30, 6))
     plt.bar(graph_labels, graph_accuracies, color = 'gray')
@@ -135,7 +195,6 @@ def plot_graph(graph_labels, graph_accuracies, title):
     plt.ylim(0, 100)
     plt.title(title)
     plt.xticks(rotation = 45, ha = 'right')
-    plt.tight_layout()
     plt.show()
 
 
@@ -155,6 +214,11 @@ def main():
 
     print(f"\nThis dataset has {n_features} features (not including the class attribute), with {n_instances} instances.")
 
+    all_features = list(range(n_features))
+    initial_accuracy = nearest_neighbor(features, labels, all_features)
+    print(f"Running nearest neighbor with all {n_features} features, using \"leaving-one-out\" evaluation, I get an accuracy of {round(initial_accuracy * 100, 1)}%")
+    print("Beginning search.\n")
+
     # Recording the time to add into the report
     if choice == "1":
         start_time = time.time()
@@ -165,13 +229,14 @@ def main():
         plot_graph(graph_labels, graph_accuracies, "Forward Selection")
     elif choice == "2":
         start_time = time.time()
-        print("You selected Backward Elimination.")
+        best_features, best_accuracy, graph_labels, graph_accuracies = backward_elimination(features, labels, n_features)
         end_time = time.time()
         total_time = end_time - start_time
         print(f"Backward Elimination took {round(total_time, 2)} seconds to run.")
+        plot_graph(graph_labels, graph_accuracies, "Backward Elimination")
     else:
         print("Invalid choice. Please type 1 or 2.")
         return
 
 if __name__ == "__main__":
-    main()
+    main()  
