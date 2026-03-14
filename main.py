@@ -193,7 +193,7 @@ def backward_elimination(features, labels, n_features):
     return best_overall_features, best_overall_accuracy, graph_labels, graph_accuracies
 
     
-
+# Graph plotting without needing to manually create graph
 def plot_graph(graph_labels, graph_accuracies, title):
     plt.figure(figsize = (30, 6))
     plt.bar(graph_labels, graph_accuracies, color = 'gray')
