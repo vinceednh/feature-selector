@@ -44,6 +44,7 @@ def nearest_neighbor(features, labels, feature_set, best_so_far_accuracy = 0):
 
         nearest_neighbor_distance = float('inf')
         nearest_neighbor_location = None
+        nearest_neighbor_label = None
 
         # "Leave one out" method: Leaving out the object to classify and finding the nearest neighbor from the rest of the objects
         for k in range(len(features)):
@@ -129,16 +130,19 @@ def forward_selection(features, labels, n_features):
     return best_overall_features, best_overall_accuracy, graph_labels, graph_accuracies
 
 def backward_elimination(features, labels, n_features):
+    # Starts with all the features and removes the worst features at each level
     current_set_of_features = list(range(n_features))
     best_overall_accuracy = 0
     best_overall_features = []
     graph_labels = []
     graph_accuracies = []
-
+    
+    # n_features - 1 will make sure I will stop and prevent checking the empty set
     for i in range(n_features - 1):
         feature_to_remove_at_this_level = None
         level_best_accuracy = 0
 
+        # Testing the accuracy of the current set
         for k in range(n_features):
             if k in current_set_of_features:
                 considered_set = []
@@ -159,8 +163,10 @@ def backward_elimination(features, labels, n_features):
 
                 if accuracy > level_best_accuracy:
                     level_best_accuracy = accuracy
+                    # Tracking which to remove, instead of adding features
                     feature_to_remove_at_this_level = k
         
+        # Removal
         current_set_of_features.remove(feature_to_remove_at_this_level)
 
         display_current = []
