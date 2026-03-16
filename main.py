@@ -70,13 +70,13 @@ def nearest_neighbor(features, labels, feature_set, best_so_far_accuracy = 0):
     # Returns the accuracy as a percentage between 0 and 1
     return number_correctly_classified / n_instances
 
-def forward_selection(features, labels, n_features):
+def forward_selection(features, labels, n_features, initial_accuracy):
     # Starts with empty sets of features and adds the best feature at each level
     current_set_of_features = []
     best_overall_accuracy = 0
     best_overall_features = []
     graph_labels = ["{}"]
-    graph_accuracies = [0]
+    graph_accuracies = [round(initial_accuracy * 100, 1)]
 
     for i in range(n_features):
         feature_to_add_at_this_level = None
@@ -228,7 +228,7 @@ def main():
     # Recording the time to add into the report
     if choice == "1":
         start_time = time.time()
-        best_features, best_accuracy, graph_labels, graph_accuracies = forward_selection(features, labels, n_features)
+        best_features, best_accuracy, graph_labels, graph_accuracies = forward_selection(features, labels, n_features, initial_accuracy)
         end_time = time.time()
         total_time = end_time - start_time
         print(f"Forward Selection took {round(total_time, 2)} seconds to run.")
